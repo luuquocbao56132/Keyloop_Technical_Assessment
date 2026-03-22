@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Service Scheduler — Test Harness</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── Reset & Base ─────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0b0d13;
+            --surface: #141720;
+            --surface-2: #1c2030;
+            --border: #262a3a;
+            --border-hover: #3a3f55;
+            --primary: #6366f1;
+            --primary-hover: #818cf8;
+            --primary-glow: rgba(99, 102, 241, .15);
+            --success: #22c55e;
+            --success-bg: rgba(34, 197, 94, .08);
+            --success-border: rgba(34, 197, 94, .25);
+            --error: #f87171;
+            --error-bg: rgba(248, 113, 113, .08);
+            --error-border: rgba(248, 113, 113, .25);
+            --warning: #fbbf24;
+            --warning-bg: rgba(251, 191, 36, .08);
+            --warning-border: rgba(251, 191, 36, .25);
+            --text: #e2e8f0;
+            --text-muted: #7c8398;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem 4rem;
+        }
+
+        /* ── Header ───────────────────────────────────────────────── */
+        .header { text-align: center; margin-bottom: 2rem; }
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), #a78bfa, #c084fc);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: .3rem;
+        }
+        .header p { color: var(--text-muted); font-size: .88rem; }
+
+        /* ── Global Notification Banner ───────────────────────────── */
+        .notification {
+            width: 100%;
+            max-width: 960px;
+            margin-bottom: 1.25rem;
+            padding: 0;
+            border-radius: var(--radius);
+            font-size: .88rem;
+            line-height: 1.6;
+            overflow: hidden;
+            animation: slideDown .35s ease;
+            display: none;
+        }
+        .notification.visible { display: block; }
+        .notification-inner {
+            display: flex;
+            align-items: flex-start;
+            gap: .75rem;
+            padding: .9rem 1.15rem;
+        }
+        .notification .notif-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+        .notification .notif-body { flex: 1; }
+        .notification .notif-title { font-weight: 600; margin-bottom: 2px; }
+        .notification .notif-msg { opacity: .85; }
+        .notification .notif-close {
+            background: none; border: none; color: inherit; opacity: .5;
+            cursor: pointer; font-size: 1.1rem; padding: 2px 6px;
+            border-radius: 4px; transition: opacity .2s, background .2s;
+            flex-shrink: 0;
+        }
+        .notification .notif-close:hover { opacity: 1; background: rgba(255,255,255,.08); }
+
+        .notification.success {
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            color: var(--success);
+        }
+        .notification.error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error);
+        }
+        .notification.warning {
+            background: var(--warning-bg);
+            border: 1px solid var(--warning-border);
+            color: var(--warning);
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Layout ───────────────────────────────────────────────── */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 960px;
+        }
+        @media (max-width: 720px) { .container { grid-template-columns: 1fr; } }
+
+        /* ── Card ─────────────────────────────────────────────────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+        .card h2 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .card h2 .icon { font-size: 1.2rem; }
+
+        /* ── Form ─────────────────────────────────────────────────── */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .75rem;
+        }
+        .form-group { margin-bottom: .85rem; }
+        .form-group label {
+            display: block;
+            font-size: .72rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: .3rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: .55rem .7rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            font-family: inherit;
+            font-size: .87rem;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+        .form-group select { cursor: pointer; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237c8398' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right .7rem center;
+            padding-right: 2rem;
+        }
+        .form-group select option { background: var(--surface-2); color: var(--text); }
+        textarea { resize: vertical; min-height: 52px; }
+
+        /* ── Buttons ──────────────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            width: 100%;
+            padding: .65rem 1rem;
+            font-family: inherit;
+            font-size: .92rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background .2s, transform .1s, box-shadow .2s;
+            color: #fff;
+            background: var(--primary);
+            margin-top: .35rem;
+        }
+        .btn:hover:not(:disabled) {
+            background: var(--primary-hover);
+            box-shadow: 0 4px 20px var(--primary-glow);
+        }
+        .btn:active:not(:disabled) { transform: scale(.98); }
+        .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+        .btn-secondary {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            border-color: var(--primary); color: var(--text);
+            background: var(--surface-2);
+            box-shadow: none;
+        }
+
+        /* ── Spinner ──────────────────────────────────────────────── */
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,.25);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .55s linear infinite;
+            display: none;
+        }
+        .btn.loading .spinner { display: inline-block; }
+        .btn.loading .btn-label { display: none; }
+        .btn .btn-loading-text { display: none; }
+        .btn.loading .btn-loading-text { display: inline; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Appointment List ─────────────────────────────────────── */
+        .appt-list { list-style: none; }
+        .appt-item {
+            padding: .7rem .85rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: .5rem;
+            font-size: .8rem;
+            line-height: 1.65;
+            animation: fadeIn .3s ease;
+        }
+        .appt-item strong { color: var(--primary-hover); }
+        .badge {
+            display: inline-block;
+            padding: .1rem .45rem;
+            border-radius: 4px;
+            font-size: .68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+        }
+        .badge-confirmed { background: rgba(34, 197, 94, .12); color: var(--success); }
+        .badge-cancelled { background: rgba(248, 113, 113, .12); color: var(--error); }
+        .badge-default   { background: var(--primary-glow); color: var(--primary-hover); }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem 0;
+            font-size: .84rem;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ── Select loading shimmer ───────────────────────────────── */
+        select.loading-select {
+            color: var(--text-muted) !important;
+            animation: shimmer 1.5s ease infinite;
+        }
+        @keyframes shimmer {
+            0%, 100% { opacity: .5; }
+            50%      { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── Header ─────────────────────────────────────────────────── -->
+    <div class="header">
+        <h1>🔧 Unified Service Scheduler</h1>
+        <p>Keyloop Technical Assessment — Client-side Test Harness</p>
+    </div>
+
+    <!-- ── Global Notification ────────────────────────────────────── -->
+    <div class="notification" id="notification" role="alert">
+        <div class="notification-inner">
+            <span class="notif-icon" id="notifIcon"></span>
+            <div class="notif-body">
+                <div class="notif-title" id="notifTitle"></div>
+                <div class="notif-msg" id="notifMsg"></div>
+            </div>
+            <button class="notif-close" id="notifClose" aria-label="Dismiss">✕</button>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <!-- ── Booking Form ───────────────────────────────────────── -->
+        <div class="card">
+            <h2><span class="icon">📋</span> Book an Appointment</h2>
+            <form id="bookingForm">
+
+                <div class="form-group">
+                    <label for="dealership_id">Dealership</label>
+                    <select id="dealership_id" required class="loading-select">
+                        <option value="">Loading dealerships…</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="vehicle_id">Vehicle</label>
+                        <select id="vehicle_id" required class="loading-select">
+                            <option value="">Loading vehicles…</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer_id">Customer (auto-linked)</label>
+                        <select id="customer_id" required disabled>
+                            <option value="">Select a vehicle first</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="service_type_id">Service Type</label>
+                    <select id="service_type_id" required class="loading-select">
+                        <option value="">Loading service types…</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="desired_time">Desired Time (UTC)</label>
+                    <input type="datetime-local" id="desired_time" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes (optional)</label>
+                    <textarea id="notes" placeholder="Any special requests…"></textarea>
+                </div>
+
+                <button type="submit" class="btn" id="submitBtn">
+                    <span class="spinner"></span>
+                    <span class="btn-label">🚀 Book Appointment</span>
+                    <span class="btn-loading-text">Booking…</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- ── Appointment List ───────────────────────────────────── -->
+        <div class="card">
+            <h2><span class="icon">📅</span> Confirmed Appointments</h2>
+            <button class="btn btn-secondary" id="refreshBtn" style="margin-bottom:.85rem;">
+                🔄 Refresh List
+            </button>
+            <ul class="appt-list" id="apptList">
+                <li class="empty-state">Click "Refresh List" to load appointments.</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- ── JavaScript (Fetch API) ─────────────────────────────────── -->
+    <script>
+    (() => {
+        'use strict';
+
+        const API = '/api/v1';
+        const $ = (id) => document.getElementById(id);
+
+        // DOM references
+        const notification = $('notification');
+        const notifIcon    = $('notifIcon');
+        const notifTitle   = $('notifTitle');
+        const notifMsg     = $('notifMsg');
+        const notifClose   = $('notifClose');
+        const submitBtn    = $('submitBtn');
+        const refreshBtn   = $('refreshBtn');
+        const apptList     = $('apptList');
+        const dealershipEl = $('dealership_id');
+        const vehicleEl    = $('vehicle_id');
+        const customerEl   = $('customer_id');
+        const serviceEl    = $('service_type_id');
+        const desiredTime  = $('desired_time');
+
+        // In-memory data stores
+        let vehiclesData  = [];
+        let customersData = [];
+
+        // ── Notification System ──────────────────────────────────
+        let notifTimer = null;
+
+        function showNotification(type, title, message, autoDismissMs = 0) {
+            clearTimeout(notifTimer);
+            const icons = { success: '✅', error: '🚫', warning: '⚠️' };
+            notification.className = `notification ${type} visible`;
+            notifIcon.textContent = icons[type] || '💬';
+            notifTitle.textContent = title;
+            notifMsg.textContent = message;
+            if (autoDismissMs > 0) {
+                notifTimer = setTimeout(dismissNotification, autoDismissMs);
+            }
+        }
+
+        function dismissNotification() {
+            notification.classList.remove('visible');
+            clearTimeout(notifTimer);
+        }
+
+        notifClose.addEventListener('click', dismissNotification);
+
+        // ── Default datetime: tomorrow 10:00 ─────────────────────
+        (() => {
+            const dt = new Date();
+            dt.setDate(dt.getDate() + 1);
+            dt.setHours(10, 0, 0, 0);
+            desiredTime.value = dt.toISOString().slice(0, 16);
+        })();
+
+        // ── Populate Dropdowns on Page Load ──────────────────────
+
+        async function loadDealerships() {
+            try {
+                const res = await fetch(`${API}/dealerships/`);
+                const data = await res.json();
+                dealershipEl.innerHTML = data.map(d =>
+                    `<option value="${d.id}">Dealership #${d.id} — ${d.name}</option>`
+                ).join('');
+                dealershipEl.classList.remove('loading-select');
+            } catch {
+                dealershipEl.innerHTML = '<option value="">⚠ Failed to load</option>';
+                dealershipEl.classList.remove('loading-select');
+            }
+        }
+
+        async function loadVehicles() {
+            try {
+                const res = await fetch(`${API}/vehicles/`);
+                vehiclesData = await res.json();
+                vehicleEl.innerHTML = vehiclesData.map(v =>
+                    `<option value="${v.id}" data-customer-id="${v.customer_id}">`+
+                    `Vehicle #${v.id} — ${v.year} ${v.make} ${v.model} (${v.license_plate || v.vin})</option>`
+                ).join('');
+                vehicleEl.classList.remove('loading-select');
+                // Auto-select customer for first vehicle
+                syncCustomerFromVehicle();
+            } catch {
+                vehicleEl.innerHTML = '<option value="">⚠ Failed to load</option>';
+                vehicleEl.classList.remove('loading-select');
+            }
+        }
+
+        async function loadCustomers() {
+            try {
+                const res = await fetch(`${API}/customers/`);
+                customersData = await res.json();
+            } catch {
+                customersData = [];
+            }
+        }
+
+        async function loadServiceTypes() {
+            try {
+                const res = await fetch(`${API}/service-types/`);
+                const data = await res.json();
+                serviceEl.innerHTML = data.map(s =>
+                    `<option value="${s.id}">${s.name} (${s.duration_minutes} min — £${s.base_price.toFixed(2)})</option>`
+                ).join('');
+                serviceEl.classList.remove('loading-select');
+            } catch {
+                serviceEl.innerHTML = '<option value="">⚠ Failed to load</option>';
+                serviceEl.classList.remove('loading-select');
+            }
+        }
+
+        // ── Auto-link Customer when Vehicle changes ──────────────
+        function syncCustomerFromVehicle() {
+            const selected = vehicleEl.selectedOptions[0];
+            if (!selected) return;
+            const custId = selected.dataset.customerId;
+            const cust = customersData.find(c => String(c.id) === custId);
+            if (cust) {
+                customerEl.innerHTML =
+                    `<option value="${cust.id}" selected>Customer #${cust.id} — ${cust.first_name} ${cust.last_name}</option>`;
+            } else {
+                customerEl.innerHTML =
+                    `<option value="${custId}" selected>Customer #${custId}</option>`;
+            }
+        }
+
+        vehicleEl.addEventListener('change', syncCustomerFromVehicle);
+
+        // Fire all loaders in parallel
+        Promise.all([loadDealerships(), loadCustomers(), loadVehicles(), loadServiceTypes()])
+            .catch(() => {});
+
+        // ── Submit Booking ────────────────────────────────────────
+        $('bookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            dismissNotification();
+
+            // Activate loading state
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+
+            const body = {
+                dealership_id:   +dealershipEl.value,
+                customer_id:     +customerEl.value,
+                vehicle_id:      +vehicleEl.value,
+                service_type_id: +serviceEl.value,
+                desired_time:    desiredTime.value + ':00',
+                notes:           $('notes').value || null,
+            };
+
+            try {
+                const res = await fetch(`${API}/appointments/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showNotification('success',
+                        `Appointment #${data.id} Confirmed!`,
+                        `Technician: ${data.technician_name} · Bay: ${data.service_bay_number} · ` +
+                        `${new Date(data.start_time).toLocaleString()} → ${new Date(data.end_time).toLocaleString()}`,
+                        8000
+                    );
+                    loadAppointments();   // auto-refresh
+                } else if (res.status === 409) {
+                    showNotification('error',
+                        'Booking Failed — Resource Conflict',
+                        data.detail || 'No available Technician or Service Bay for this time slot.'
+                    );
+                } else if (res.status === 404) {
+                    showNotification('error',
+                        'Booking Failed — Resource Not Found',
+                        data.detail || 'One of the selected resources does not exist.'
+                    );
+                } else if (res.status === 422) {
+                    const errors = (data.detail || [])
+                        .map(e => `${e.loc?.slice(-1)?.[0] || 'field'}: ${e.msg}`)
+                        .join('; ');
+                    showNotification('warning',
+                        'Validation Error',
+                        errors || 'Please check your form inputs and try again.'
+                    );
+                } else {
+                    showNotification('error', `Error (${res.status})`, data.detail || JSON.stringify(data));
+                }
+
+            } catch (err) {
+                showNotification('error', 'Network Error', `Could not reach the server: ${err.message}`);
+            } finally {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            }
+        });
+
+        // ── Load Appointment List ────────────────────────────────
+        async function loadAppointments() {
+            apptList.innerHTML = '<li class="empty-state">Loading…</li>';
+            try {
+                const res = await fetch(`${API}/appointments/`);
+                const data = await res.json();
+
+                if (!data.appointments.length) {
+                    apptList.innerHTML = '<li class="empty-state">No appointments found.</li>';
+                    return;
+                }
+
+                apptList.innerHTML = data.appointments.map(a => {
+                    let badgeClass = 'badge-default';
+                    if (a.status === 'confirmed')  badgeClass = 'badge-confirmed';
+                    if (a.status === 'cancelled')  badgeClass = 'badge-cancelled';
+
+                    return `
+                    <li class="appt-item">
+                        <span class="badge ${badgeClass}">${a.status}</span>
+                        <strong>#${a.id}</strong> — ${a.service_type_name || 'Service'}<br>
+                        🧑‍🔧 ${a.technician_name || '—'} &nbsp;·&nbsp;
+                        🏗️ ${a.service_bay_number || '—'}<br>
+                        🕐 ${new Date(a.start_time).toLocaleString()} →
+                        ${new Date(a.end_time).toLocaleString()}
+                    </li>`;
+                }).join('');
+            } catch (err) {
+                apptList.innerHTML = `<li class="empty-state">Error: ${err.message}</li>`;
+            }
+        }
+
+        refreshBtn.addEventListener('click', loadAppointments);
+
+    })();
+    </script>
+
+</body>
+</html>
