@@ -53,6 +53,37 @@ A browser subagent was used to end-to-end test the running server:
 2. It clicked **Refresh List**, verifying the full stack works and it popped up in the list.
 3. It attempted to book a 3rd appointment at the same slot, triggering a **409 Conflict** as both bays were now occupied.
 
+## Backend Changes
+Added 4 new GET endpoints to app/routes.py:
+
+    GET /api/v1/dealerships/
+
+    GET /api/v1/customers/
+
+    GET /api/v1/vehicles/
+
+    GET /api/v1/service-types/
+
+## Frontend Changes (templates/index.html)
+1. Dynamic Dropdowns — All ID fields are now **select** dropdowns populated via fetch() on page load:
+
+        Dealership: "Dealership #1 — Keyloop Downtown Service Centre"
+
+        Vehicle: "Vehicle #1 — 2022 Toyota Corolla (AB12 CDE)"
+
+        Customer: Auto-linked from vehicle selection — "Customer #1 — John Doe" (disabled, read-only)
+
+        Service Type: "Oil Change (60 min — £49.99)"
+2. Notification Banner — A dismissible alert appears above the form:
+
+        🟢 Green for success: "Appointment #1 Confirmed! Technician: Alice Smith · Bay: BAY-A…"
+
+        🔴 Red for 409 conflicts: "Booking Failed — Resource Conflict: No qualified technician is available…"
+
+        🟡 Yellow for 422 validation errors
+
+3. Loading State — Button shows spinner + "Booking…" text while the POST is in flight, then re-enables.
+
 ## Multi-bay resource assignment logic
 
 When booking the second appointment, the system correctly noticed that `BAY-A` (used by Appointment #1) was occupied and dynamically assigned `BAY-B` to the new appointment. When a third was attempted, it rejected it because no bays were left.
